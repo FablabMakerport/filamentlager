@@ -1993,18 +1993,37 @@ input[type=color]{width:100%;height:44px;border:1px solid var(--line);background
     $('#liPw').value=''; startApp(data.session);
   };
   // Passwort ändern, während man angemeldet ist (ohne Mail)
-  $('#btnPw').onclick=()=>{ showAuth('setpw'); $('#spInfo').textContent='Neues Passwort festlegen, mindestens 10 Zeichen.'; $('#spBtn').textContent='Passwort speichern'; $('#spCancel').hidden=false; };
-  $('#spCancel').onclick=()=>{ $('#spPw').value=''; $('#spPw2').value=''; $('#spCancel').hidden=true; $('#spBtn').textContent='Speichern und weiter'; hideAuth(); };
+  // Leerer Bestand: direkt zum Import
+  function maybeImport(){ if(ready && !Object.keys(fil).length){ showTab('bestand'); $('#btnImport').click(); $('#impHint').textContent='Noch kein Bestand angelegt. Lade deine Bestandsdatei hoch oder füge die Liste ein.'; } }
+  function askNewPassword(first){
+    showAuth('setpw');
+    $('#spInfo').textContent = first
+      ? 'Du hast dich mit einem Startpasswort angemeldet. Lege jetzt dein eigenes Passwort fest, mindestens 10 Zeichen.'
+      : 'Neues Passwort festlegen, mindestens 10 Zeichen.';
+    $('#spBtn').textContent='Passwort speichern';
+    $('#spCancel').textContent = first ? 'Später' : 'Abbrechen';
+    $('#spCancel').hidden=false;
+  }
+  $('#btnPw').onclick=()=>askNewPassword(false);
+  $('#spCancel').onclick=()=>{ $('#spPw').value=''; $('#spPw2').value=''; $('#spCancel').hidden=true; $('#spBtn').textContent='Speichern und weiter'; hideAuth(); maybeImport(); };
   $('#frmSetPw').onsubmit=async()=>{
     const a=$('#spPw').value, b=$('#spPw2').value;
     if(a.length<10){ $('#spMsg').className='msg err'; $('#spMsg').textContent='Mindestens 10 Zeichen, bitte.'; return; }
     if(a!==b){ $('#spMsg').className='msg err'; $('#spMsg').textContent='Die beiden Passwörter stimmen nicht überein.'; return; }
     $('#spBtn').disabled=true;
-    const {data,error}=await sb.auth.updateUser({password:a});
+    const {data,error}=await sb.auth.updateUser({password:a,data:{pw_set:true}});
     $('#spBtn').disabled=false;
-    if(error){ $('#spMsg').className='msg err'; $('#spMsg').textContent='Speichern fehlgeschlagen: '+error.message; return; }
+    if(error){
+      const m=String(error.code||error.message||'');
+      $('#spMsg').className='msg err';
+      $('#spMsg').textContent = /same_password|different from the old/i.test(m) ? 'Das neue Passwort muss sich vom bisherigen unterscheiden.'
+        : /weak_password|weak/i.test(m) ? 'Das Passwort ist zu schwach. Nimm ein längeres mit Zahlen oder Sonderzeichen.'
+        : /reauth|recent/i.test(m) ? 'Bitte melde dich einmal ab und wieder an, dann ändere das Passwort.'
+        : 'Speichern fehlgeschlagen: '+error.message;
+      return;
+    }
     $('#spPw').value=''; $('#spPw2').value='';
-    if(ready){ $('#spCancel').hidden=true; $('#spBtn').textContent='Speichern und weiter'; hideAuth(); flash('Passwort geändert.'); return; }
+    if(ready){ $('#spCancel').hidden=true; $('#spBtn').textContent='Speichern und weiter'; hideAuth(); flash('Passwort geändert.'); maybeImport(); return; }
     const {data:{session}}=await sb.auth.getSession(); startApp(session);
   };
   $('#btnLogout').onclick=async()=>{
@@ -2030,7 +2049,9 @@ input[type=color]{width:100%;height:44px;border:1px solid var(--line);background
     render(); showTab(t);
     ready=true; setState('ok','Verbunden');
     subscribe();
-    if(!Object.keys(fil).length){ showTab('bestand'); $('#btnImport').click(); $('#impHint').textContent='Noch kein Bestand angelegt. Lade deine Bestandsdatei hoch oder füge die Liste ein.'; }
+    const meta=(session&&session.user&&session.user.user_metadata)||{};
+    if(!meta.pw_set){ askNewPassword(true); return; }
+    maybeImport();
   }
 
   async function boot(){
