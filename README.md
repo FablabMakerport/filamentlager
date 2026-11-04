@@ -10,7 +10,6 @@ Live unter **https://filamentlager.makerport.de**, nur für eingeladene Nutzer.
 | Webseite | GitHub Pages aus dem Ordner `docs/` | liefert das Tool aus, kein FTP nötig |
 | Adresse | DNS bei All-Inkl | `filamentlager` zeigt per CNAME auf GitHub Pages |
 | Daten, Login, Dateien | Supabase, Region Frankfurt | Datenbank, Anmeldung, Fotos und Druckdateien |
-| Login-Mails | Postfach bei All-Inkl | Versand über SMTP aus Supabase |
 
 ```
 docs/                 Alles, was GitHub Pages ausliefert
@@ -32,9 +31,12 @@ Nach ein bis zwei Minuten ist die Änderung live.
 ## Nutzer verwalten
 
 Supabase → Authentication → Users:
-- **Add user → Send invitation**: Person einladen, sie legt ihr Passwort selbst fest.
-- **Add user → Create new user** mit „Auto Confirm User“: Zugang direkt mit Passwort anlegen, ohne Mail.
+- **Add user → Create new user**: E-Mail und Startpasswort eintragen, „Auto Confirm User“ anhaken. Das Passwort persönlich weitergeben.
+- Jeder kann sein Passwort im Tool oben unter **Passwort ändern** selbst ändern.
+- **Passwort vergessen**: Nutzer löschen und mit neuem Startpasswort neu anlegen. Die Buchungen bleiben erhalten.
 - **Delete user**: Zugang entfernen.
+
+Es werden keine Mails verschickt.
 
 Die Registrierung ist abgeschaltet, ohne Einladung kommt niemand hinein.
 

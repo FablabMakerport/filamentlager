@@ -452,7 +452,7 @@ input[type=color]{width:100%;height:44px;border:1px solid var(--line);background
       </svg>
       <div>
         <h1>Filament<em>lager</em></h1>
-        <div class="sub"><span class="live busy" id="sysState">Verbinde …</span> · <span class="who" id="who"></span> · <button type="button" class="linkbtn" id="btnLogout">Abmelden</button></div>
+        <div class="sub"><span class="live busy" id="sysState">Verbinde …</span> · <span class="who" id="who"></span> · <button type="button" class="linkbtn" id="btnPw">Passwort ändern</button> · <button type="button" class="linkbtn" id="btnLogout">Abmelden</button></div>
       </div>
     </div>
     <div class="stats" id="stats"></div>
@@ -751,9 +751,8 @@ input[type=color]{width:100%;height:44px;border:1px solid var(--line);background
         <input id="liPw" type="password" autocomplete="current-password" required>
       </label>
       <button class="btn primary" type="submit" id="liBtn">Anmelden</button>
-      <div class="row"><button type="button" class="linkbtn" id="liForgot">Passwort vergessen?</button></div>
       <div class="msg" id="liMsg" role="status"></div>
-      <div class="muted" style="font-size:.82rem">Zugang nur auf Einladung. Bitte wende dich an die Person, die das Filamentlager verwaltet.</div>
+      <div class="muted" style="font-size:.82rem">Zugang nur auf Einladung. Passwort vergessen oder noch kein Zugang? Bitte wende dich an die Person, die das Filamentlager verwaltet.</div>
     </form>
     <form id="frmSetPw" hidden>
       <div class="ph"><h2>Passwort festlegen</h2></div>
@@ -765,6 +764,7 @@ input[type=color]{width:100%;height:44px;border:1px solid var(--line);background
         <input id="spPw2" type="password" autocomplete="new-password" required>
       </label>
       <button class="btn primary" type="submit" id="spBtn">Speichern und weiter</button>
+      <button class="btn" type="button" id="spCancel" hidden>Abbrechen</button>
       <div class="msg" id="spMsg" role="status"></div>
     </form>
   </div>
@@ -1992,13 +1992,9 @@ input[type=color]{width:100%;height:44px;border:1px solid var(--line);background
     if(error){ $('#liMsg').className='msg err'; $('#liMsg').textContent = /invalid/i.test(error.message) ? 'E-Mail oder Passwort stimmt nicht.' : 'Anmeldung fehlgeschlagen: '+error.message; return; }
     $('#liPw').value=''; startApp(data.session);
   };
-  $('#liForgot').onclick=async()=>{
-    const email=$('#liMail').value.trim();
-    if(!email){ $('#liMsg').className='msg err'; $('#liMsg').textContent='Trag zuerst deine E-Mail-Adresse ein.'; $('#liMail').focus(); return; }
-    const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
-    $('#liMsg').className='msg'+(error?' err':' ok');
-    $('#liMsg').textContent = error ? 'Mail konnte nicht gesendet werden: '+error.message : 'Falls die Adresse eingeladen ist, kommt gleich eine Mail mit einem Link zum Zurücksetzen.';
-  };
+  // Passwort ändern, während man angemeldet ist (ohne Mail)
+  $('#btnPw').onclick=()=>{ showAuth('setpw'); $('#spInfo').textContent='Neues Passwort festlegen, mindestens 10 Zeichen.'; $('#spBtn').textContent='Passwort speichern'; $('#spCancel').hidden=false; };
+  $('#spCancel').onclick=()=>{ $('#spPw').value=''; $('#spPw2').value=''; $('#spCancel').hidden=true; $('#spBtn').textContent='Speichern und weiter'; hideAuth(); };
   $('#frmSetPw').onsubmit=async()=>{
     const a=$('#spPw').value, b=$('#spPw2').value;
     if(a.length<10){ $('#spMsg').className='msg err'; $('#spMsg').textContent='Mindestens 10 Zeichen, bitte.'; return; }
@@ -2008,6 +2004,7 @@ input[type=color]{width:100%;height:44px;border:1px solid var(--line);background
     $('#spBtn').disabled=false;
     if(error){ $('#spMsg').className='msg err'; $('#spMsg').textContent='Speichern fehlgeschlagen: '+error.message; return; }
     $('#spPw').value=''; $('#spPw2').value='';
+    if(ready){ $('#spCancel').hidden=true; $('#spBtn').textContent='Speichern und weiter'; hideAuth(); flash('Passwort geändert.'); return; }
     const {data:{session}}=await sb.auth.getSession(); startApp(session);
   };
   $('#btnLogout').onclick=async()=>{
@@ -2039,7 +2036,7 @@ input[type=color]{width:100%;height:44px;border:1px solid var(--line);background
   async function boot(){
     if(!sb){ showAuth('login','Die Seite ist nicht richtig eingerichtet: config.js fehlt oder ist unvollständig.','err'); $('#liBtn').disabled=true; return; }
     const {data:{session}}=await sb.auth.getSession();
-    if(linkError){ history.replaceState(null,'',location.pathname); showAuth('login','Der Link ist abgelaufen oder ungültig. Fordere über „Passwort vergessen?“ einen neuen an.','err'); return; }
+    if(linkError){ history.replaceState(null,'',location.pathname); showAuth('login','Der Link ist abgelaufen oder ungültig. Melde dich mit deinem Passwort an oder wende dich an die Person, die das Filamentlager verwaltet.','err'); return; }
     if(session && (linkType==='invite'||linkType==='recovery')){ showAuth('setpw'); return; }
     if(session) startApp(session); else showAuth('login');
     sb.auth.onAuthStateChange(ev=>{ if(ev==='PASSWORD_RECOVERY') showAuth('setpw'); });
